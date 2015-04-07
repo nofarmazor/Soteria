@@ -1,0 +1,3 @@
+[submodule "killerbee"]
+	path = killerbee
+	url = https://github.com/riverloopsec/killerbee
