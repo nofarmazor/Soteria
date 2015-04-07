@@ -8,7 +8,7 @@ __author__ = 'Soteria'
 # Create new packet:
 # Change sequence numbers in the new packet
 # Create new packet data
-# Encrypt the data with the key
+# Encrypt the data with the keyc1
 # Inject!
 
 import logging
