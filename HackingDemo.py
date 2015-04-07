@@ -12,7 +12,7 @@ except ImportError:
 	exit(-1)
 
 
-def
+#def
 
-if __name__ == '__main__':
-	interact(mydict = globals(), mybanner = 'Hacking Demo')
+#if __name__ == '__main__':
+	#interact(mydict = globals(), mybanner = 'Hacking Demo')
