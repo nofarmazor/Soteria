@@ -1,15 +1,15 @@
 __author__ = 'Soteria'
 
-# Sniff link-status and route request messages
-# Extract relevant sequence numbers:
+# 1. Sniff link-status and route request messages
+# 2. Extract relevant sequence numbers:
     ## IEEE sequence number
     ## zigbee NWK sequence number
     ## security header - Frame Counter
-# Create new packet:
-# Change sequence numbers in the new packet
-# Create new packet data
-# Encrypt the data with the keyc1
-# Inject!
+# 3. Create new packet:
+# 4. Change sequence numbers in the new packet
+# 5. Create new packet data
+# 6. Encrypt the data with the keyc1
+# 7. Inject!
 
 import logging
 logging.getLogger('scapy')
