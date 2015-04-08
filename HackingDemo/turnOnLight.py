@@ -21,7 +21,7 @@ except ImportError:
 	from sys import exit
 	exit(-1)
 
-#from killerbee import *
+from killerbee import *
 from killerbee.scapy_extensions import *
 
 del hexdump
@@ -32,4 +32,6 @@ DEFAULT_KB_CHANNEL = 11
 DEFAULT_KB_DEVICE = '10.10.10.2'
 
 #Sniff packets
-kbsniff(DEFAULT_KB_CHANNEL,2,DEFAULT_KB_DEVICE)
+#def kbsniff(channel = None, count = 0, iface = None, store = 1, prn = None, lfilter = None, stop_filter = None, verbose = None, timeout = None):
+#kbsniff(DEFAULT_KB_CHANNEL,2,DEFAULT_KB_DEVICE)
+kbtshark(channel = DEFAULT_KB_CHANNEL, count = 5, iface = DEFAULT_KB_DEVICE);
