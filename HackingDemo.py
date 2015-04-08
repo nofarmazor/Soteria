@@ -21,10 +21,7 @@ except ImportError:
 	from sys import exit
 	exit(-1)
 
-a = Ether()/IP(dst="www.slashdot.org")/TCP()/"GET /index.html HTTP/1.0 \n\n"
-IP().show()
-
-def
-
 if __name__ == '__main__':
-	interact(mydict = globals(), mybanner = 'Hacking Demo')
+#    interact(mydict = globals(), mybanner = 'Hacking Demo')
+    a = Ether()/IP(dst="www.slashdot.org")/TCP()/"GET /index.html HTTP/1.0 \n\n"
+    IP().show()
