@@ -15,11 +15,12 @@ import logging
 logging.getLogger('scapy')
 
 try:
-	from scapy.all import *
+	from zbscapy.all import *
 except ImportError:
 	print 'This Requires Scapy To Be Installed.'
 	from sys import exit
 	exit(-1)
+
 
 if __name__ == '__main__':
 #    interact(mydict = globals(), mybanner = 'Hacking Demo')
