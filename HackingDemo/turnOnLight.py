@@ -34,7 +34,7 @@ TARGET_DEVICE_ID = '0x055f' # light bulb to be hacked
 SOURCE_DEVICE_ID = '0x0000' # Spoofed device ID (smart hub)
 LINK_KEY = '\xdf\x42\xb5\x95\x6a\x2b\xbd\x46\x18\x8d\x59\x0a\xdb\x04\xb6\x09'
 #LINK_KEY = 'df42b5956a2bbd46188d590adb04b609'
-
+ #
 
 #Sniff packets to a list and extract data:
 packetsList = kbtshark(channel = DEFAULT_KB_CHANNEL,count = 1,iface = DEFAULT_KB_DEVICE, store = 1)
