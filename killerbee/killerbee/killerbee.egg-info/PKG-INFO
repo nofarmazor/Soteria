@@ -1,0 +1,14 @@
+Metadata-Version: 1.1
+Name: killerbee
+Version: 2.5.0
+Summary: ZigBee and IEEE 802.15.4 Attack Framework and Tools
+Home-page: UNKNOWN
+Author: Joshua Wright, Ryan Speers, Ricky Melgares
+Author-email: jwright@willhackforsushi.com, ryan@riverloopsecurity.com
+License: LICENSE.txt
+Description: UNKNOWN
+Platform: UNKNOWN
+Requires: crypto
+Requires: usb
+Requires: gtk
+Requires: cairo
