@@ -325,9 +325,21 @@ class SEWIO:
 
         correctPacket = packet.encode("hex")
 
+        # Fix 3s bug:
+        packetLength = packetLength - 5
+        print "Length = " + str(packetLength)
+        endOfPacket = correctPacket[-20:]
+        print "End of packet = " + endOfPacket
+        clean_end_of_packet = endOfPacket[1::2]
+        print "Clean end of packet = " + clean_end_of_packet
+        correctPacket = correctPacket[:-20] + correctPacket[-20:][1::2]
+
+        print "Injecting packet with data:"
+        print(correctPacket)
+
         for pnum in range(0, count):
             #Inject the packet
-            formatedcall = "inject.cgi?chn={0}&modul={1}&txlevel={2}&rxen={3}&nrepeat={4}&tspace={5}&autocrc=1&spayload={6}&len={7}".format(channel,self.modulation,txlevel,RxEnable,RepeatNumber,timeSpace,correctPacket,packetLength)
+            formatedcall = "inject.cgi?chn={0}&modul={1}&txlevel={2}&rxen={3}&nrepeat={4}&tspace={5}&autocrc={6}&spayload={6}&len={7}".format(channel,self.modulation,txlevel,RxEnable,RepeatNumber,timeSpace,autoCorrect,correctPacket,packetLength)
             self.__make_rest_call(formatedcall,fetch=True)
             time.sleep(delay)
 
