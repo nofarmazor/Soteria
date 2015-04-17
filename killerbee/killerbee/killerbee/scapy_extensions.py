@@ -509,8 +509,9 @@ def kbencrypt(pkt, data, key = None, verbose = None):
     nonce += struct.pack(">I", f['fc'])
 
     #Soteria: Dismiss reserved2 ##
-    fc = (f['reserved1'] << 6) | (f['extended_nonce'] << 5) | (f['key_type'] << 3) | 0
+    #fc = (f['reserved1'] << 6) | (f['extended_nonce'] << 5) | (f['key_type'] << 3) | 0
     #fc = (f['reserved1'] << 6) | (f['extended_nonce'] << 5) | (f['key_type'] << 3) | f['reserved2']
+    fc = (f['reserved1'] << 6) | (f['extended_nonce'] << 5) | (f['key_type'] << 3) | f['reserved1']
 
     nonce += chr(fc | 0x05)
 
@@ -525,8 +526,10 @@ def kbencrypt(pkt, data, key = None, verbose = None):
     # the Security Control Field flags have to be adjusted before this is calculated, so we store their original values so we can reset them later
     #Soteria: Dismiss reserved2 ##
     # reserved2 = pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2']
+    reserved1 = pkt.getlayer(ZigbeeSecurityHeader).fields['reserved1']
     #Soteria: Dismiss reserved2 ##
     # pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2'] = (pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2'] | 0x05)
+    pkt.getlayer(ZigbeeSecurityHeader).fields['reserved1'] = (pkt.getlayer(ZigbeeSecurityHeader).fields['reserved1'] | 0x05)
 
     # Soteria: Split the row to 2 rows for easier debuging:
     # Original line: zigbeeData = pkt.getlayer(ZigbeeNWK).do_build()
@@ -536,7 +539,8 @@ def kbencrypt(pkt, data, key = None, verbose = None):
     zigbeeData = zigbeeData[:-crop_size]
     #Soteria: Dismiss reserved2 ##
     # pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2'] = reserved2
-    
+    pkt.getlayer(ZigbeeSecurityHeader).fields['reserved1'] = reserved1
+
     (payload, mic) = zigbee_crypt.encrypt_ccm(key, nonce, 4, decrypted, zigbeeData)
 
     if verbose > 2:

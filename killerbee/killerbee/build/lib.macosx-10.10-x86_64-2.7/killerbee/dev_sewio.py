@@ -332,7 +332,9 @@ class SEWIO:
         print "Before fix: "
         print correctPacket
 
-        correctPacket = correctPacket[:-20] + staticData.MY_HEX_MIC[2:]
+        # Try to ommit ZCL after encryption:
+        # correctPacket = correctPacket[:-20] + staticData.MY_HEX_MIC[2:]
+        correctPacket = correctPacket[:-32] + staticData.MY_HEX_MIC[2:]
         packetLength = len(correctPacket) / 2
 
         print "Packet lenght = " + str(packetLength)
