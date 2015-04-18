@@ -432,11 +432,6 @@ def kbdecrypt(pkt, key = None, verbose = None):
     #nonce = struct.pack('L',f['ext_source'])+struct.pack('I',f['fc']) + sec_ctrl_byte
     nonce = struct.pack('L',f['source'])+struct.pack('I',f['fc']) + sec_ctrl_byte
 
-    #nonce = "" # build the nonce
-    #nonce += struct.pack(">Q", f['ext_source'])
-    #nonce += struct.pack(">I", f['fc'])
-    #fc = (f['reserved1'] << 6) | (f['extended_nonce'] << 5) | (f['key_type'] << 3) | f['reserved2']
-    #nonce += chr(fc | 0x05)
 
     if verbose > 2:
         print "Decrypt Details:"
@@ -444,16 +439,18 @@ def kbdecrypt(pkt, key = None, verbose = None):
         print "\tNonce:          " + nonce.encode('hex')
         print "\tMic:            " + mic.encode('hex')
         print "\tEncrypted Data: " + encrypted.encode('hex')
-    
-    crop_size = 4 + 2 + len(pkt.getlayer(ZigbeeSecurityHeader).fields['data'])  # the size of all the zigbee crap, minus the length of the encrypted data, mic and FCS
+
+    #Soteria: decreasing the crop_size by 2 (we deleted the FCS)
+    # crop_size = 4 + 2 + len(pkt.getlayer(ZigbeeSecurityHeader).fields['data'])  # the size of all the zigbee crap, minus the length of the encrypted data, mic and FCS
+    crop_size = 4  + len(pkt.getlayer(ZigbeeSecurityHeader).fields['data'])
+
 
     # the Security Control Field flags have to be adjusted before this is calculated, so we store their original values so we can reset them later
     #reserved2 = pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2']
     #pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2'] = (pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2'] | 0x05)
-    zigbeeData = pkt.getlayer(ZigbeeNWK).do_build()
-    zigbeeData = zigbeeData[:-crop_size]
-    #pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2'] = reserved2
-    
+    zigbeeData = pkt.getlayer(ZigbeeNWK).do_build()[:-crop_size]
+
+
     (payload, micCheck) = zigbee_crypt.decrypt_ccm(key, nonce, mic, encrypted, zigbeeData)
 
     if verbose > 2:
@@ -493,67 +490,44 @@ def kbencrypt(pkt, data, key = None, verbose = None):
         log_killerbee.error("Could not import zigbee_crypt extension, cryptographic functionality is not available.")
         return None
 
-    # Soteria: Add empty ('0') value to reserved2 field
-    #pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2'] = 0
-
     f = pkt.getlayer(ZigbeeSecurityHeader).fields
     f['data'] = ''  # explicitly clear it out, this should go without say
-    
+
     if isinstance(data, Packet):
         decrypted = data.do_build()
     else:
         decrypted = data
 
-    nonce = ""  # build the nonce
-    nonce += struct.pack(">Q", f['source'])
-    nonce += struct.pack(">I", f['fc'])
 
-    #Soteria: Dismiss reserved2 ##
-    #fc = (f['reserved1'] << 6) | (f['extended_nonce'] << 5) | (f['key_type'] << 3) | 0
-    #fc = (f['reserved1'] << 6) | (f['extended_nonce'] << 5) | (f['key_type'] << 3) | f['reserved2']
-    fc = (f['reserved1'] << 6) | (f['extended_nonce'] << 5) | (f['key_type'] << 3) | f['reserved1']
+    # Soteria: Build the nonce the same way it is built by the decryption method:
+    pkt = pkt.copy()   #this is hack to fix the below line
+    pkt.nwk_seclevel=5 #the issue appears to be when this is set
 
-    nonce += chr(fc | 0x05)
+    # Soteria: Omit the last 4 bytes of the MIC:
+    crop_size = 4
+    zigbeeData = pkt.getlayer(ZigbeeNWK).do_build()[:-crop_size]
+
+    sec_ctrl_byte = str(pkt.getlayer(ZigbeeSecurityHeader))[0]
+    nonce = struct.pack('L',f['source'])+struct.pack('I',f['fc']) + sec_ctrl_byte
 
     if verbose > 2:
         print "Encrypt Details:"
         print "\tKey:            " + key.encode('hex')
         print "\tNonce:          " + nonce.encode('hex')
         print "\tDecrypted Data: " + decrypted.encode('hex')
-        
-    crop_size = 4 + 2 # the size of all the zigbee crap, minus the length of the mic and FCS
-    
-    # the Security Control Field flags have to be adjusted before this is calculated, so we store their original values so we can reset them later
-    #Soteria: Dismiss reserved2 ##
-    # reserved2 = pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2']
-    reserved1 = pkt.getlayer(ZigbeeSecurityHeader).fields['reserved1']
-    #Soteria: Dismiss reserved2 ##
-    # pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2'] = (pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2'] | 0x05)
-    pkt.getlayer(ZigbeeSecurityHeader).fields['reserved1'] = (pkt.getlayer(ZigbeeSecurityHeader).fields['reserved1'] | 0x05)
-
-    # Soteria: Split the row to 2 rows for easier debuging:
-    # Original line: zigbeeData = pkt.getlayer(ZigbeeNWK).do_build()
-    zigbeeNWK_layer = pkt.getlayer(ZigbeeNWK)
-    zigbeeData = zigbeeNWK_layer.do_build()
-
-    zigbeeData = zigbeeData[:-crop_size]
-    #Soteria: Dismiss reserved2 ##
-    # pkt.getlayer(ZigbeeSecurityHeader).fields['reserved2'] = reserved2
-    pkt.getlayer(ZigbeeSecurityHeader).fields['reserved1'] = reserved1
 
     (payload, mic) = zigbee_crypt.encrypt_ccm(key, nonce, 4, decrypted, zigbeeData)
 
     if verbose > 2:
         print "\tEncrypted Data: " + payload.encode('hex')
         print "\tMic:            " + mic.encode('hex')
-    
+
     # Set pkt's values to reflect the encrypted ones to it's ready to be sent
     f['data'] = payload
+    # Soteria: MIC field encoding type is ASCII, thus Storing the mic in hex version:
+    # f['mic'] = struct.unpack(">I", mic)[0]
+    f['mic'] = mic
 
-    # Soteria: Assigning the mic in hex to the packet:
-    # Original line is:
-    f['mic'] = struct.unpack(">I", mic)[0]
-    #f['mic'] = mic.encode('hex')
-
+    # Soteria: Update MIC and encrypted data
+    pkt.getlayer(ZigbeeSecurityHeader).fields = f
     return pkt
-
