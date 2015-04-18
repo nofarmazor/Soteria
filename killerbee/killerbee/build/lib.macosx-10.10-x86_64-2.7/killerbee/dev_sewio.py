@@ -322,22 +322,11 @@ class SEWIO:
         timeSpace = 1
         autoCorrect = 1
         packetLength = len(packet)
-
+        print "Packet length = " + str(packetLength)
         correctPacket = packet.encode("hex")
 
-        import staticData
-        print "MIC IS ABSOLUTLY " + staticData.MY_HEX_MIC
+        import InjectionHelper
 
-        # Remove last 9 bytes and add the 4 byte of the hexed mic
-        print "Before fix: "
-        print correctPacket
-
-        # Try to ommit ZCL after encryption:
-        # correctPacket = correctPacket[:-20] + staticData.MY_HEX_MIC[2:]
-        correctPacket = correctPacket[:-32] + staticData.MY_HEX_MIC[2:]
-        packetLength = len(correctPacket) / 2
-
-        print "Packet lenght = " + str(packetLength)
         # Fix 3s bug:
         # packetLength = packetLength - 5
         # print "Length = " + str(packetLength)
@@ -347,19 +336,7 @@ class SEWIO:
         # print "Clean end of packet = " + clean_end_of_packet
         # correctPacket = correctPacket[:-20] + correctPacket[-20:][1::2]
 
-
-        print "Injecting packet with data:"
-        import sys
-        print correctPacket
-        l = len(correctPacket) * 2
-        i = 0
-        while i < l - 2:
-            sys.stdout.write(correctPacket[i:i+2])
-            i += 2
-            sys.stdout.write(" ")
-            if i % 16 == 0:
-                print ""
-
+        InjectionHelper.print_string_as_packet("DEV_SEWIO - Injecting packet with data", correctPacket)
 
 
         for pnum in range(0, count):
