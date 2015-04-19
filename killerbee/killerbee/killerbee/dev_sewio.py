@@ -325,7 +325,7 @@ class SEWIO:
         print "Packet length = " + str(packetLength)
         correctPacket = packet.encode("hex")
 
-        import InjectionHelper
+        import PrintHelper
 
         # Fix 3s bug:
         # packetLength = packetLength - 5
@@ -336,7 +336,7 @@ class SEWIO:
         # print "Clean end of packet = " + clean_end_of_packet
         # correctPacket = correctPacket[:-20] + correctPacket[-20:][1::2]
 
-        InjectionHelper.print_string_as_packet("DEV_SEWIO - Injecting packet with data", correctPacket)
+        PrintHelper.print_string_as_packet("DEV_SEWIO - Injecting packet with data", correctPacket)
 
 
         for pnum in range(0, count):
