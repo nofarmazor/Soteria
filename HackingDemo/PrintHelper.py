@@ -3,10 +3,10 @@ __author__ = 'omerturgeman'
 import sys
 from time import sleep
 
-speed = 0.02
+#speed = 0.02
 
 
-def print_clock_effect(first, last):
+def print_clock_effect(first, last, speed):
     for x in range(0,3):
         sys.stdout.write('\r' + first + '|' + last)
         sys.stdout.flush()
@@ -21,7 +21,7 @@ def print_clock_effect(first, last):
         sys.stdout.flush()
         sleep(speed)
 
-def reaviling_string(heradline, secret_string):
+def reaviling_string(heradline, secret_string, speed):
     for char_pos in range(0,len(secret_string)):
         print_input_first = heradline
         print_input_last = ""
@@ -29,7 +29,7 @@ def reaviling_string(heradline, secret_string):
             print_input_first += secret_string[i]
         for i in range(0, len(secret_string) - char_pos - 1):
             print_input_last += 'X'
-        print_clock_effect(print_input_first, print_input_last)
+        print_clock_effect(print_input_first, print_input_last, speed)
     sys.stdout.write('\r' + heradline + secret_string)
     print ""
 

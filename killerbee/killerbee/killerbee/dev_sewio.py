@@ -24,7 +24,8 @@ from kbutils import KBCapabilities, makeFCS, isIpAddr, KBInterfaceError
 DEFAULT_IP = "10.10.10.2"   #IP address of the sniffer
 DEFAULT_GW = "10.10.10.1"   #IP address of the default gateway
 DEFAULT_UDP = 17754         #"Remote UDP Port"
-TESTED_FW_VERS = ["0.5"]    #Firmware versions tested with the current version of this client device connector
+TESTED_FW_VERS = ["0.7"]    # Soteria: update supported FW to 0.7
+#TESTED_FW_VERS = ["0.5"]    #Firmware versions tested with the current version of this client device connector
 DEFAULT_CHANNEL = 11 #Soteria: Quirky zigbee default channel
 
 NTP_DELTA = 70*365*24*60*60 #datetime(1970, 1, 1, 0, 0, 0) - datetime(1900, 1, 1, 0, 0, 0)
@@ -325,24 +326,13 @@ class SEWIO:
         print "Packet length = " + str(packetLength)
         correctPacket = packet.encode("hex")
 
-        import PrintHelper
-
-        # Fix 3s bug:
-        # packetLength = packetLength - 5
-        # print "Length = " + str(packetLength)
-        # endOfPacket = correctPacket[-20:]
-        # print "End of packet = " + endOfPacket
-        # clean_end_of_packet = endOfPacket[1::2]
-        # print "Clean end of packet = " + clean_end_of_packet
-        # correctPacket = correctPacket[:-20] + correctPacket[-20:][1::2]
-
-        PrintHelper.print_string_as_packet("DEV_SEWIO - Injecting packet with data", correctPacket)
-
-
+        # Turn on sniffer (so we can continue to sniff after the injection)
+        self.sniffer_on(channel=channel)
         for pnum in range(0, count):
             #Inject the packet
-            formatedcall = "inject.cgi?chn={0}&modul={1}&txlevel={2}&rxen={3}&nrepeat={4}&tspace={5}&autocrc={6}&spayload={6}&len={7}".format(channel,self.modulation,txlevel,RxEnable,RepeatNumber,timeSpace,autoCorrect,correctPacket,packetLength)
-            self.__make_rest_call(formatedcall,fetch=True)
+            formatedcall = "inject.cgi?chn={0}&modul={1}&txlevel={2}&rxen={3}&nrepeat={4}&tspace={5}&autocrc={6}&spayload={7}&len={8}".format(channel,self.modulation,txlevel,RxEnable,RepeatNumber,timeSpace,autoCorrect,correctPacket,packetLength)
+            print formatedcall
+            self.__make_rest_call(formatedcall, fetch=True)
             time.sleep(delay)
 
 
