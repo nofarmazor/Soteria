@@ -52,5 +52,3 @@ def print_string_as_packet (headline, str_packet):
             else:
                 new_line = False
         print ""
-        #print "-------------------------"
-        print ""
