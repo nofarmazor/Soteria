@@ -1,3 +1,6 @@
 __author__ = 'omerturgeman'
-class staticData:
+
+
+
+class InjectionHelper:
     MY_HEX_MIC = 0
