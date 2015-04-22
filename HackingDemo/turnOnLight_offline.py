@@ -27,7 +27,6 @@ except ImportError:
 
 from killerbee import *
 from killerbee.scapy_extensions import *
-import InjectionHelper
 del hexdump
 from scapy.utils import hexdump				# Force using Scapy's hexdump()
 import os
@@ -63,7 +62,6 @@ PrintHelper.print_string_as_packet("Loaded packet", encrypted_command_packet.do_
 # Extracting the MIC from the packet payload:
 encrypted_command_packet.mic = encrypted_command_packet.payload.payload.payload.fields['data'][-6:-2]
 # Storing the MIC to fix 3's bug later in the dev_sewio.py:
-InjectionHelper.MY_HEX_MIC = str(encrypted_command_packet.mic)
 # Omitting the data by 6 (to get rid of the FCS + MIC):
 encrypted_command_packet.payload.payload.payload.fields['data'] = encrypted_command_packet.payload.payload.payload.fields['data'][:-6]
 print "Payload is encrypted!"

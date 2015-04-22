@@ -14,8 +14,12 @@ __author__ = 'Soteria'
 import dill  # In order to save and load packet from file
 import PrintHelper
 import logging
+import sys
+import os
+
+sys.path.insert(0, '/usr/local/lib/python2.7/dist-packages')
 log_killerbee = logging.getLogger('scapy.killerbee')
-import struct
+
 try:
 	from scapy.all import *
 except ImportError:
@@ -25,10 +29,9 @@ except ImportError:
 
 from killerbee import *
 from killerbee.scapy_extensions import *
-import InjectionHelper
 del hexdump
 from scapy.utils import hexdump				# Force using Scapy's hexdump()
-import os
+
 
 
 # STATIC DEFAULTS:
@@ -54,6 +57,7 @@ DEFAULT_LAST_ZIGBEE_APP_LAYER_COUNTER = 163
 DEFAULT_LAST_ZIGBEE_CLUSTER_SEQ_NUM = 15
 
 
+# command line arguments
 command = DEFAULT_COMMAND
 cluster_type = DEFAULT_CLUSTER
 if len(sys.argv) < 2:
@@ -104,6 +108,7 @@ else:
 
 # Extracting the MIC from the packet payload:
 encrypted_command_packet.mic = encrypted_command_packet.payload.payload.payload.fields['data'][-6:-2]
+
 # Omitting the data by 6 (to get rid of the FCS + MIC):
 encrypted_command_packet.payload.payload.payload.fields['data'] = encrypted_command_packet.payload.payload.payload.fields['data'][:-6]
 print "Payload is encrypted!"

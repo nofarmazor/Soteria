@@ -25,7 +25,6 @@ except ImportError:
 
 from killerbee import *
 from killerbee.scapy_extensions import *
-import InjectionHelper
 del hexdump
 from scapy.utils import hexdump				# Force using Scapy's hexdump()
 import os
